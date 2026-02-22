@@ -9,6 +9,8 @@
 	let text = $state('');
 	let submitting = $state(false);
 
+	let isLoggedIn = $derived(!!data.user);
+
 	// Clear optimistic posts when server data refreshes
 	$effect(() => {
 		data.blogPosts;
@@ -22,6 +24,7 @@
 		<p class="mt-1 text-gray-500 dark:text-gray-400">Share your thoughts with the world</p>
 	</div>
 
+	{#if isLoggedIn}
 	<!-- New Post Form -->
 	<form
 		method="POST"
@@ -99,6 +102,21 @@
 			{/if}
 		</button>
 	</form>
+	{:else}
+	<!-- Sign-in prompt -->
+	<div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 text-center">
+		<svg class="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+		</svg>
+		<p class="text-gray-500 dark:text-gray-400 mb-3">Sign in to create posts</p>
+		<a
+			href="/login"
+			class="inline-flex items-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-all duration-200 shadow-sm hover:shadow"
+		>
+			Sign in
+		</a>
+	</div>
+	{/if}
 
 	<!-- Posts List -->
 	<div class="space-y-4">
@@ -115,6 +133,14 @@
 							: 'No date'}
 					</time>
 				</div>
+				{#if post.user_display_name}
+					<p class="mt-1 text-sm text-indigo-500 dark:text-indigo-400">
+						<svg class="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+						</svg>
+						{post.user_display_name}
+					</p>
+				{/if}
 				<p class="mt-3 text-gray-600 dark:text-gray-300 leading-relaxed">{post.text}</p>
 			</article>
 		{:else}

@@ -1,5 +1,4 @@
 import type { PageServerLoad, Actions } from './$types';
-import { supabase } from '$lib/supabaseClient';
 import { fail } from '@sveltejs/kit';
 
 type BlogPost = {
@@ -7,14 +6,16 @@ type BlogPost = {
   title: string;
   text: string;
   createdAt: string;
+  user_id: string | null;
+  user_display_name: string | null;
 };
 
-export const load: PageServerLoad = async () => {
-  const { data, error } = await supabase
+export const load: PageServerLoad = async ({ locals }) => {
+  const { data, error } = await locals.supabase
     .from('BlogPost')
     .select('*')
-    .order('createdAt', { ascending: false })
-    .limit(3);
+    .order('createdAt', { ascending: false });
+    // .limit(3);
 
   if (error) {
     console.error('Error loading blog posts:', error.message);
@@ -27,7 +28,11 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-  create: async ({ request }) => {
+  create: async ({ request, locals }) => {
+    if (!locals.user) {
+      return fail(401, { error: 'You must be signed in to create a post' });
+    }
+
     const formData = await request.formData();
     const title = formData.get('title')?.toString()?.trim();
     const text = formData.get('text')?.toString()?.trim();
@@ -36,9 +41,12 @@ export const actions: Actions = {
       return fail(400, { error: 'Title and text are required', title, text });
     }
 
-    const { data, error } = await supabase
+    const user = locals.user;
+    const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Anonymous';
+
+    const { data, error } = await locals.supabase
       .from('BlogPost')
-      .insert({ title, text })
+      .insert({ title, text, user_id: user.id, user_display_name: displayName })
       .select()
       .single();
 

@@ -1,8 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { supabase } from '$lib/supabaseClient';
 
-export const load: PageServerLoad = async () => {
-	const { data, error } = await supabase
+export const load: PageServerLoad = async ({ locals }) => {
+	const { data, error } = await locals.supabase
 		.from('BlogPost')
 		.select('createdAt')
 		.order('createdAt', { ascending: true });
