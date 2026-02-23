@@ -1,5 +1,6 @@
 <script lang="ts">
     import { supabase } from "$lib/supabaseClient";
+    import { browser, dev } from "$app/environment";
 
     let displayName = $state('');
     let email = $state('');
@@ -7,6 +8,14 @@
     let error = $state('');
     let success = $state('');
     let loading = $state(false);
+
+    const getRedirectUrl = () => {
+        if (!browser) return '';
+
+        return dev
+            ? 'http://localhost:5173/auth/callback'
+            : `${window.location.origin}/auth.callback`;
+    }
 
     async function handleSubmit(event: Event) {
         event.preventDefault();
@@ -21,7 +30,7 @@
                 data: {
                     display_name: displayName
                 },
-                emailRedirectTo: `${window.location.origin}/auth/callback`
+                emailRedirectTo: getRedirectUrl()
             }
         });
 
@@ -44,7 +53,7 @@
         const { error: err } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/auth/callback`
+                redirectTo: getRedirectUrl()
             }
         });
 
