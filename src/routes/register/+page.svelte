@@ -8,6 +8,15 @@
     let error = $state('');
     let success = $state('');
     let loading = $state(false);
+    let role = $state<'uczen' | 'nauczyciel'>('uczen');
+    let classYear = $state('1');
+    let classPrefix = $state('M');
+    let gender = $state<'kobieta' | 'mezczyzna' | 'inna' | 'nie_podaje'>('nie_podaje');
+    let isFromCity = $state(false);
+
+    const classPrefixes = ['M', 'E', 'P', 'D', 'I', 'J', 'F', 'G', 'FG'];
+    const classYears = ['1', '2', '3', '4', '5'];
+    const EXTRA_USER_TABLE = 'user_data';
 
     const getRedirectUrl = () => {
         if (!browser) return '';
@@ -23,7 +32,7 @@
         success = '';
         loading = true;
 
-        const { error: err } = await supabase.auth.signUp({
+        const { data: signUpData, error: err } = await supabase.auth.signUp({
             email,
             password,
             options: {
@@ -39,10 +48,38 @@
         if (err) {
             error = err.message;
         } else {
+            const userId = signUpData.user?.id;
+
+            if (userId) {
+                const { error: insertError } = await supabase
+                    .from(EXTRA_USER_TABLE)
+                    .upsert({
+                        id_user: userId,
+                        is_worker: 0,
+                        is_teacher: role === 'nauczyciel' ? 1 : 0,
+                        is_student: role === 'uczen' ? 1 : 0,
+                        class: role === 'uczen' ? classYear : null,
+                        class_prefix: role === 'uczen' ? classPrefix : null,
+                        gender: gender === 'kobieta' ? 'F' : 'M',
+                        is_city: isFromCity === true ? 1 : 0
+                    });
+
+                if (insertError) {
+                    error = `Konto utworzone, ale nie udalo sie zapisac danych do tabeli ${EXTRA_USER_TABLE}: ${insertError.message}`;
+                    loading = false;
+                    return;
+                }
+            }
+
             success = 'Check your email for a confirmation link!';
             displayName = '';
             email = '';
             password = '';
+            role = 'uczen';
+            classYear = '1';
+            classPrefix = 'M';
+            gender = 'kobieta';
+            isFromCity = false;
         }
     }
 
@@ -123,6 +160,77 @@
                 />
                 <p class="mt-1 text-xs text-gray-400">At least 6 characters</p>
             </div>
+
+            <div>
+                <label for="role" class="block text-sm font-medium mb-1.5">Rola</label>
+                <select
+                    id="role"
+                    name="role"
+                    bind:value={role}
+                    class="w-full rounded-xl border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                    required
+                >
+                    <option value="uczen">Uczeń</option>
+                    <option value="nauczyciel">Nauczyciel</option>
+                </select>
+            </div>
+
+            {#if role === 'uczen'}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="classPrefix" class="block text-sm font-medium mb-1.5">Prefix klasy</label>
+                        <select
+                            id="classPrefix"
+                            name="classPrefix"
+                            bind:value={classPrefix}
+                            class="w-full rounded-xl border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                            required={role === 'uczen'}
+                        >
+                            {#each classPrefixes as prefix}
+                                <option value={prefix}>{prefix}</option>
+                            {/each}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="classYear" class="block text-sm font-medium mb-1.5">Klasa</label>
+                        <select
+                            id="classYear"
+                            name="classYear"
+                            bind:value={classYear}
+                            class="w-full rounded-xl border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                            required={role === 'uczen'}
+                        >
+                            {#each classYears as year}
+                                <option value={year}>{year}</option>
+                            {/each}
+                        </select>
+                    </div>
+                </div>
+            {/if}
+
+            <div>
+                <label for="gender" class="block text-sm font-medium mb-1.5">Płeć</label>
+                <select
+                    id="gender"
+                    name="gender"
+                    bind:value={gender}
+                    class="w-full rounded-xl border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                    required
+                >
+                    <option value="kobieta">Kobieta</option>
+                    <option value="mezczyzna">Mężczyzna</option>
+                </select>
+            </div>
+
+            <label class="flex items-center justify-between rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-3 cursor-pointer">
+                <span class="text-sm font-medium">Czy jesteś z miasta?</span>
+                <input
+                    type="checkbox"
+                    class="h-5 w-5 accent-indigo-600"
+                    bind:checked={isFromCity}
+                />
+            </label>
 
             <button
                 type="submit"

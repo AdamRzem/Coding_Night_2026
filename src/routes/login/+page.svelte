@@ -18,7 +18,7 @@
             error = err.message;
             loading = false;
         } else {
-            goto('/');
+            goto('/panel');
         }
     }
 

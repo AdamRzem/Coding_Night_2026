@@ -8,5 +8,5 @@ export const GET: RequestHandler = async ({ url, locals }) => {
         await locals.supabase.auth.exchangeCodeForSession(code);
     }
 
-    redirect(303, '/');
+    redirect(303, '/panel');
 }
