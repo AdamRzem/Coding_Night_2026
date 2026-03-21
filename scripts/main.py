@@ -8,55 +8,21 @@ key = ""
 supabase = create_client(url, key)
 
 
-def get_prediction_data(user_uuid):
-    # 1. Fetch User Preferences & Data
-    user_res = supabase.table("user_preferences") \
-        .select("*, user_data(*)") \
-        .eq("id_user", user_uuid) \
-        .single().execute()
+def get_user_data(user_uuid):
+    """
+    Fetches both data and preferences for a specific ID.
+    """
+    try:
+        response = supabase.table("user_data").select("*").execute()
 
-    user_profile = user_res.data
+        return response.data
 
-    # 2. Fetch All Available Dishes and their Tags from our View
-    dish_res = supabase.table("dish_with_tags_view").select("*").execute()
-    menu_items = dish_res.data
-
-    return user_profile, menu_items
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
 
 
-def predict_best_dish(user_prefs, dishes_with_tags, current_weather):
-    scores = {}
+target_uuid = "39908fca-7292-4ed3-b5c1-e9fecd28d33d"
+user_info = get_user_data(target_uuid)
+print(user_info)
 
-    for dish in dishes_with_tags:
-        score = 0
-        tags = dish['tags']  # List of tags like ['meat', 'warm', 'spicy']
-
-        # --- 1. Hard Constraints (The "No-Go" List) ---
-        if user_prefs['is_vegetarian'] and 'meat' in tags: continue
-        if user_prefs['is_vegan'] and ('meat' in tags or 'dairy' in tags or 'egg' in tags): continue
-        if user_prefs['is_nut_allergy'] and 'nuts' in tags: continue
-
-        # --- 2. Preference Matching ---
-        if user_prefs['warm'] and 'warm' in tags: score += 5
-        if user_prefs['cold'] and 'cold' in tags: score += 5
-
-        # Match spice tolerance
-        if 'spicy' in tags:
-            score += user_prefs['spice_tolerance']
-
-            # --- 3. Weather Context ---
-        if current_weather == "Rainy" and 'warm' in tags:
-            score += 3  # Rain makes people want warm food
-        if current_weather == "Clear" and 'cold' in tags:
-            score += 2  # Sunny days might favor cold dishes
-
-        scores[dish['name']] = score
-
-    # Sort dishes by highest score
-    recommended = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    return recommended[0] if recommended else "No suitable dish found"
-
-
-user_id = 0
-profile, menu = get_prediction_data(user_id)
-# print(f"Prediction: {predict_best_dish(user_a, current_dishes, 'Rainy')}")
