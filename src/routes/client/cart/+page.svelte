@@ -17,19 +17,45 @@
 		}
 	}
 
-	function getDefaultPickupTime(): string {
+	const PICKUP_TIME_SLOTS = [
+		{ h: 7, m: 45 },  // 7:45
+		{ h: 8, m: 35 },  // 8:35
+		{ h: 9, m: 25 },  // 9:25
+		{ h: 10, m: 15 }, // 10:15
+		{ h: 11, m: 15 }, // 11:15
+		{ h: 12, m: 5 },  // 12:05
+		{ h: 12, m: 55 }, // 12:55
+		{ h: 14, m: 0 },  // 14:00
+		{ h: 14, m: 45 }, // 14:45
+		{ h: 15, m: 40 }, // 15:40
+		{ h: 16, m: 30 }, // 16:30
+		{ h: 17, m: 20 }, // 17:20
+		{ h: 18, m: 10 }, // 18:10
+	];
+
+	function getDefaultPickupDate(): string {
 		const d = new Date();
-		d.setHours(d.getHours() + 1);
-		d.setMinutes(0, 0, 0);
 		const yyyy = d.getFullYear();
 		const mm = String(d.getMonth() + 1).padStart(2, '0');
 		const dd = String(d.getDate()).padStart(2, '0');
-		const hh = String(d.getHours()).padStart(2, '0');
-		const min = String(d.getMinutes()).padStart(2, '0');
-		return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+		return `${yyyy}-${mm}-${dd}`;
 	}
 
-	let pickupTime = $state(getDefaultPickupTime());
+	function buildPickupDatetime(dateStr: string, slot: { h: number; m: number }): string {
+		return `${dateStr}T${String(slot.h).padStart(2, '0')}:${String(slot.m).padStart(2, '0')}`;
+	}
+
+	// Default: today's date, first available slot (7:45) or next slot if 7:45 has passed
+	function getDefaultSlotIndex(): number {
+		const now = new Date();
+		const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+		const idx = PICKUP_TIME_SLOTS.findIndex(({ h, m }) => h * 60 + m > minutesSinceMidnight);
+		return idx >= 0 ? idx : 0;
+	}
+
+	let pickupDate = $state(getDefaultPickupDate());
+	let pickupSlotIndex = $state(getDefaultSlotIndex());
+	let pickupTime = $derived(buildPickupDatetime(pickupDate, PICKUP_TIME_SLOTS[Number(pickupSlotIndex)]));
 </script>
 
 <div class="space-y-6">
@@ -120,17 +146,33 @@
 			class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 space-y-4"
 		>
 			<input type="hidden" name="dishIds" value={JSON.stringify(cart.items.map(i => i.id))} />
+			<input type="hidden" name="plannedPickup" value={pickupTime} />
 
-			<div>
-				<label for="pickupTime" class="block text-sm font-medium mb-1.5">Pickup time</label>
-				<input
-					type="datetime-local"
-					id="pickupTime"
-					name="plannedPickup"
-					bind:value={pickupTime}
-					class="w-full rounded-xl border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:border-amber-500 focus:ring-amber-500 transition-colors"
-					required
-				/>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<div>
+					<label for="pickupDate" class="block text-sm font-medium mb-1.5">Pickup date</label>
+					<input
+						type="date"
+						id="pickupDate"
+						bind:value={pickupDate}
+						class="w-full rounded-xl border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:border-amber-500 focus:ring-amber-500 transition-colors"
+						required
+					/>
+				</div>
+				<div>
+					<label for="pickupTime" class="block text-sm font-medium mb-1.5">Pickup time</label>
+					<select
+						id="pickupTime"
+						bind:value={pickupSlotIndex}
+						class="w-full rounded-xl border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:border-amber-500 focus:ring-amber-500 transition-colors"
+					>
+						{#each PICKUP_TIME_SLOTS as slot, i}
+							<option value={i}>
+								{String(slot.h).padStart(2, '0')}:{String(slot.m).padStart(2, '0')}
+							</option>
+						{/each}
+					</select>
+				</div>
 			</div>
 
 			<button

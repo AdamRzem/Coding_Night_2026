@@ -1,4 +1,7 @@
 import type { PageServerLoad } from './$types';
+import { seedFromDateString, shuffleSeeded } from '$lib/menuOfTheDay';
+
+const MENU_OF_THE_DAY_COUNT = 5;
 
 export const load: PageServerLoad = async ({ locals, depends }) => {
     depends('supabase:db');
@@ -10,7 +13,12 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
 
     if (error) {
         console.error('Error loading menu:', error.message);
-        return { dishes: [], error: error.message };
+        return {
+            dishes: [],
+            menuOfTheDay: [],
+            menuOfTheDayDateLabel: '',
+            error: error.message
+        };
     }
 
     const dishes = (data ?? []).map((d: any) => ({
@@ -22,5 +30,28 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
             .filter((n): n is string => Boolean(n))
     }));
 
-    return { dishes, error: null };
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const todayLocal = `${y}-${m}-${d}`;
+    const seed = seedFromDateString(todayLocal);
+    const shuffled = shuffleSeeded(dishes, seed);
+    const menuOfTheDay = shuffled.slice(0, Math.min(MENU_OF_THE_DAY_COUNT, shuffled.length));
+    const featuredIds = new Set(menuOfTheDay.map((dish) => dish.id));
+    const restDishes = dishes.filter((dish) => !featuredIds.has(dish.id));
+
+    const menuOfTheDayDateLabel = new Intl.DateTimeFormat('en-GB', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    }).format(now);
+
+    return {
+        dishes: restDishes,
+        menuOfTheDay,
+        menuOfTheDayDateLabel,
+        error: null
+    };
 };
