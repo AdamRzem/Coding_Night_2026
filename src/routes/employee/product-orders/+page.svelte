@@ -2,14 +2,35 @@
 	import { enhance } from '$app/forms';
 	import { formatOrderDateTime } from '$lib/orderDateTime';
 
-	let { data } = $props();
+	let { data, form }: { data: any; form: any } = $props();
 
-	const STATUS_LABELS: Record<string, { label: string; color: string; next: string | null }> = {
-		suggested: { label: 'Suggested', color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20', next: 'Accept' },
-		accepted: { label: 'Accepted', color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20', next: 'Mark In Progress' },
-		in_progress: { label: 'In Progress', color: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20', next: 'Mark Delivered' },
-		delivered: { label: 'Delivered', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20', next: null }
+	const STATUS_LABELS: Record<string, { label: string; color: string; badgeColor: string; next: string | null }> = {
+		suggested: { label: 'Suggested', color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20', badgeColor: 'bg-amber-500', next: 'Accept' },
+		accepted: { label: 'Accepted', color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20', badgeColor: 'bg-blue-500', next: 'Mark In Progress' },
+		in_progress: { label: 'In Progress', color: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20', badgeColor: 'bg-purple-500', next: 'Mark Delivered' },
+		delivered: { label: 'Delivered', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20', badgeColor: 'bg-emerald-500', next: null }
 	};
+
+	const TABS = ['all', 'suggested', 'accepted', 'in_progress', 'delivered'] as const;
+	const TAB_LABELS: Record<string, string> = {
+		all: 'All',
+		suggested: 'Suggested',
+		accepted: 'Accepted',
+		in_progress: 'In Progress',
+		delivered: 'Delivered'
+	};
+
+	let activeTab = $state<string>('all');
+
+	const filteredOrders = $derived(
+		activeTab === 'all'
+			? data.orders
+			: data.orders.filter((o: any) => o.status === activeTab)
+	);
+
+	function countByStatus(status: string): number {
+		return data.orders.filter((o: any) => o.status === status).length;
+	}
 </script>
 
 <div class="space-y-6">
@@ -20,6 +41,17 @@
 		</p>
 	</div>
 
+	{#if form?.error}
+		<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl text-sm">
+			{form.error}
+		</div>
+	{/if}
+	{#if form?.success}
+		<div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 px-4 py-3 rounded-xl text-sm">
+			Status updated successfully.
+		</div>
+	{/if}
+
 	{#if data.error}
 		<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl text-sm">
 			{data.error}
@@ -27,64 +59,98 @@
 	{/if}
 
 	{#if data.orders.length > 0}
-		<div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-			<div class="overflow-x-auto">
-				<table class="w-full text-sm text-left">
-					<thead class="bg-gray-50 dark:bg-gray-800/50 text-xs uppercase text-gray-500 dark:text-gray-400">
-						<tr>
-							<th class="px-4 py-3 font-medium">#</th>
-							<th class="px-4 py-3 font-medium">Product</th>
-							<th class="px-4 py-3 font-medium">Order Qty</th>
-							<th class="px-4 py-3 font-medium">Current Stock</th>
-							<th class="px-4 py-3 font-medium">Created</th>
-							<th class="px-4 py-3 font-medium">Status</th>
-							<th class="px-4 py-3 font-medium">Action</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-						{#each data.orders as order (order.id)}
-							{@const info = STATUS_LABELS[order.status] ?? STATUS_LABELS.suggested}
-							<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-								<td class="px-4 py-3 text-gray-500 dark:text-gray-400">{order.id}</td>
-								<td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{order.product_name}</td>
-								<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{order.quantity}</td>
-								<td class="px-4 py-3 text-gray-700 dark:text-gray-300">
-									{#if order.product_current_qty != null}
-										<span class={order.product_current_qty < 10 ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>
-											{order.product_current_qty}
-										</span>
-									{:else}
-										—
-									{/if}
-								</td>
-								<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatOrderDateTime(order.created_at)}</td>
-								<td class="px-4 py-3">
-									<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold {info.color}">
-										{info.label}
-									</span>
-								</td>
-								<td class="px-4 py-3">
-									{#if info.next}
-										<form method="POST" action="?/advance" use:enhance>
-											<input type="hidden" name="orderId" value={order.id} />
-											<input type="hidden" name="currentStatus" value={order.status} />
-											<button
-												type="submit"
-												class="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer"
-											>
-												{info.next}
-											</button>
-										</form>
-									{:else}
-										<span class="text-xs text-gray-400">—</span>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+		<!-- Status tabs -->
+		<div class="flex flex-wrap gap-2">
+			{#each TABS as tab}
+				{@const count = tab === 'all' ? data.orders.length : countByStatus(tab)}
+				<button
+					type="button"
+					onclick={() => activeTab = tab}
+					class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer
+						{activeTab === tab
+							? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm'
+							: 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}"
+				>
+					{TAB_LABELS[tab]}
+					{#if count > 0}
+						<span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-bold
+							{activeTab === tab
+								? 'bg-white/20 dark:bg-gray-900/20 text-white dark:text-gray-900'
+								: (tab !== 'all' ? STATUS_LABELS[tab]?.badgeColor + ' text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300')}">
+							{count}
+						</span>
+					{/if}
+				</button>
+			{/each}
 		</div>
+
+		{#if filteredOrders.length > 0}
+			<div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+				<div class="overflow-x-auto">
+					<table class="w-full text-sm text-left">
+						<thead class="bg-gray-50 dark:bg-gray-800/50 text-xs uppercase text-gray-500 dark:text-gray-400">
+							<tr>
+								<th class="px-4 py-3 font-medium">#</th>
+								<th class="px-4 py-3 font-medium">Product</th>
+								<th class="px-4 py-3 font-medium">Order Qty</th>
+								<th class="px-4 py-3 font-medium">Current Stock</th>
+								<th class="px-4 py-3 font-medium">Created</th>
+								<th class="px-4 py-3 font-medium">Status</th>
+								<th class="px-4 py-3 font-medium">Action</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+							{#each filteredOrders as order (order.id)}
+								{@const info = STATUS_LABELS[order.status] ?? STATUS_LABELS.suggested}
+								<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+									<td class="px-4 py-3 text-gray-500 dark:text-gray-400">{order.id}</td>
+									<td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{order.product_name}</td>
+									<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{order.quantity}</td>
+									<td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+										{#if order.product_current_qty != null}
+											<span class={order.product_current_qty < 10 ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>
+												{order.product_current_qty}
+											</span>
+										{:else}
+											—
+										{/if}
+									</td>
+									<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatOrderDateTime(order.created_at)}</td>
+									<td class="px-4 py-3">
+										<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold {info.color}">
+											{info.label}
+										</span>
+									</td>
+									<td class="px-4 py-3">
+										{#if info.next}
+											<form method="POST" action="?/advance" use:enhance>
+												<input type="hidden" name="orderId" value={order.id} />
+												<input type="hidden" name="currentStatus" value={order.status} />
+												<button
+													type="submit"
+													class="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer"
+												>
+													{info.next}
+												</button>
+											</form>
+										{:else}
+											<span class="text-xs text-emerald-500">
+												<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+												Done
+											</span>
+										{/if}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		{:else}
+			<div class="text-center py-10 bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+				<p class="text-sm text-gray-400 dark:text-gray-500">No orders with status "{TAB_LABELS[activeTab]}"</p>
+			</div>
+		{/if}
 	{:else if !data.error}
 		<div class="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
 			<svg class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

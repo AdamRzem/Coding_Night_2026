@@ -1,17 +1,7 @@
 <script lang="ts">
-	let { data } = $props();
+	import { formatOrderDateTime } from '$lib/orderDateTime';
 
-	function formatDateTime(value: string | null): string {
-		if (!value) return '—';
-		const date = new Date(value);
-		if (Number.isNaN(date.getTime())) return value;
-		const yyyy = date.getFullYear();
-		const mm = String(date.getMonth() + 1).padStart(2, '0');
-		const dd = String(date.getDate()).padStart(2, '0');
-		const hh = String(date.getHours()).padStart(2, '0');
-		const min = String(date.getMinutes()).padStart(2, '0');
-		return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
-	}
+	let { data } = $props();
 </script>
 
 <div class="space-y-6">
@@ -44,8 +34,8 @@
 							<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
 								<td class="px-4 py-3 text-gray-500 dark:text-gray-400">{row.id}</td>
 								<td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{row.dish_name}</td>
-								<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatDateTime(row.created_at)}</td>
-								<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatDateTime(row.planned_pickup)}</td>
+							<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatOrderDateTime(row.created_at)}</td>
+							<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatOrderDateTime(row.planned_pickup)}</td>
 								<td class="px-4 py-3 text-gray-600 dark:text-gray-300">{row.id_plate ?? '—'}</td>
 							</tr>
 						{/each}

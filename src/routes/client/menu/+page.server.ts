@@ -26,15 +26,18 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
         const products = links
             .map((lr: any) => lr.product?.name as string | undefined)
             .filter((n): n is string => Boolean(n));
-        const available = links.every(
-            (lr: any) => lr.product?.quantity != null && Number(lr.product.quantity) > 0
+        const quantities = links.map(
+            (lr: any) => lr.product?.quantity != null ? Number(lr.product.quantity) : 0
         );
+        const max_orderable = quantities.length > 0 ? Math.min(...quantities) : 0;
+        const available = max_orderable > 0;
         return {
             id: d.id as number,
             name: (d.name ?? '—') as string,
             prep_time_minutes: d.prep_time_minutes as number | null,
             products,
-            available
+            available,
+            max_orderable
         };
     });
 

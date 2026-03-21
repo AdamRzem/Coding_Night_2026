@@ -1,7 +1,29 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { cart } from '$lib/stores/cart.svelte';
+	import { goto } from '$app/navigation';
+	import { formatOrderDateTime } from '$lib/orderDateTime';
 
 	let { data } = $props();
+
+	let addedDishId = $state<number | null>(null);
+
+	const cartCountByDish = $derived(
+		cart.items.reduce<Record<number, number>>((acc, item) => {
+			acc[item.id] = (acc[item.id] ?? 0) + 1;
+			return acc;
+		}, {})
+	);
+
+	function canAddDish(rec: { dish_id: number; max_orderable: number }): boolean {
+		return (cartCountByDish[rec.dish_id] ?? 0) < rec.max_orderable;
+	}
+
+	function addRecommendation(dishId: number, dishName: string) {
+		cart.add({ id: dishId, name: dishName });
+		addedDishId = dishId;
+		setTimeout(() => { if (addedDishId === dishId) addedDishId = null; }, 1500);
+	}
 
 	let qrModalOpen = $state(false);
 	let qrImageSrc = $state('');
@@ -32,18 +54,6 @@
 		qrModalOpen = false;
 		qrSummary = null;
 		qrImageSrc = '';
-	}
-
-	function formatDateTime(value: string | null): string {
-		if (!value) return '—';
-		const date = new Date(value);
-		if (Number.isNaN(date.getTime())) return value;
-		const yyyy = date.getFullYear();
-		const mm = String(date.getMonth() + 1).padStart(2, '0');
-		const dd = String(date.getDate()).padStart(2, '0');
-		const hh = String(date.getHours()).padStart(2, '0');
-		const min = String(date.getMinutes()).padStart(2, '0');
-		return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
 	}
 
 	const quickLinks = [
@@ -77,6 +87,44 @@
 		{/each}
 	</div>
 
+	<!-- Recommendations -->
+	{#if data.recommendations.length > 0}
+		<div>
+			<h2 class="text-xl font-bold tracking-tight mb-3">Recommended for you</h2>
+			<div class="bg-gradient-to-br from-amber-50 via-white to-orange-50/80 dark:from-amber-950/30 dark:via-gray-900 dark:to-amber-950/15 rounded-2xl border border-amber-200 dark:border-amber-800/60 shadow-sm p-5">
+				<p class="text-xs text-amber-700 dark:text-amber-300/80 mb-4">
+					Based on your order history, time of day, and weather conditions
+				</p>
+				<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+					{#each data.recommendations as rec, i (rec.dish_id)}
+						{@const available = canAddDish(rec)}
+						<button
+							type="button"
+							onclick={() => addRecommendation(rec.dish_id, rec.dish_name)}
+							disabled={!available}
+							class="group flex flex-col gap-1.5 bg-white/80 dark:bg-gray-900/70 rounded-xl border border-amber-100 dark:border-amber-900/40 px-4 py-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
+						>
+							<span class="text-xs font-bold text-amber-500 dark:text-amber-400">#{i + 1}</span>
+							<span class="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-2">
+								{rec.dish_name}
+							</span>
+							<div class="flex items-center justify-between gap-2">
+								<span class="text-xs text-gray-500 dark:text-gray-400">{rec.chance}% match</span>
+								{#if !available}
+									<span class="text-xs font-medium text-red-500 dark:text-red-400">Out of stock</span>
+								{:else if addedDishId === rec.dish_id}
+									<span class="text-xs font-medium text-emerald-600 dark:text-emerald-400">Added!</span>
+								{:else}
+									<span class="text-xs font-medium text-amber-600 dark:text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">+ Add to cart ({rec.max_orderable - (cartCountByDish[rec.dish_id] ?? 0)} left)</span>
+								{/if}
+							</div>
+						</button>
+					{/each}
+				</div>
+			</div>
+		</div>
+	{/if}
+
 	<!-- Active orders (in progress) -->
 	<!-- <div>
 		<h2 class="text-xl font-bold tracking-tight mb-3">Active orders</h2>
@@ -102,8 +150,8 @@
 								<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
 									<td class="px-4 py-3 text-gray-500 dark:text-gray-400">{row.id}</td>
 									<td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{row.dish_name}</td>
-									<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatDateTime(row.created_at)}</td>
-									<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatDateTime(row.planned_pickup)}</td>
+								<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatOrderDateTime(row.created_at)}</td>
+								<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatOrderDateTime(row.planned_pickup)}</td>
 									<td class="px-4 py-3 text-gray-600 dark:text-gray-300">{row.id_plate ?? '—'}</td>
 								</tr>
 							{/each}
@@ -139,7 +187,7 @@
 							<tr>
 								<th class="px-4 py-3 font-medium">#</th>
 								<th class="px-4 py-3 font-medium">Dish</th>
-								<th class="px-4 py-3 font-medium">Ordered</th>
+								<th class="px-4 py-3 font-medium">Pickup</th>
 								<th class="px-4 py-3 font-medium">Status</th>
 								<th class="px-4 py-3 font-medium">Pickup QR</th>
 							</tr>
@@ -156,12 +204,12 @@
 											onclick={() => openPickupQr(row.pickup_qr_url ?? null, row)}
 											title={row.pickup_qr_url ? 'Show pickup QR code' : 'Configure ORDER_PICKUP_SECRET to enable'}
 										>
-											{row.dish_name}
-										</button>
-									</td>
-									<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatDateTime(row.created_at)}</td>
-									<td class="px-4 py-3">
-										{#if row.is_done}
+										{row.dish_name}
+									</button>
+								</td>
+								<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{formatOrderDateTime(row.planned_pickup)}</td>
+								<td class="px-4 py-3">
+									{#if row.is_done}
 											<span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
 												<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
 												Done

@@ -4,6 +4,21 @@
 	let { data } = $props();
 	let expandedId = $state<number | null>(null);
 
+	const cartCountByDish = $derived(
+		cart.items.reduce<Record<number, number>>((acc, item) => {
+			acc[item.id] = (acc[item.id] ?? 0) + 1;
+			return acc;
+		}, {})
+	);
+
+	function canAdd(dish: { id: number; max_orderable: number }): boolean {
+		return (cartCountByDish[dish.id] ?? 0) < dish.max_orderable;
+	}
+
+	function remaining(dish: { id: number; max_orderable: number }): number {
+		return dish.max_orderable - (cartCountByDish[dish.id] ?? 0);
+	}
+
 	function toggle(id: number) {
 		expandedId = expandedId === id ? null : id;
 	}
@@ -86,6 +101,7 @@
 							</button>
 
 							{#if expandedId === dish.id}
+								{@const dishAvail = canAdd(dish)}
 								<div class="border-t border-amber-100 dark:border-amber-900/40 px-6 py-5 bg-amber-50/80 dark:bg-gray-800/60 space-y-4">
 									{#if dish.products.length > 0}
 										<div>
@@ -105,12 +121,17 @@
 									<button
 										type="button"
 										onclick={() => addToCart(dish)}
-										class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-base font-semibold rounded-xl transition-all shadow-md hover:shadow-lg cursor-pointer"
+										disabled={!dishAvail}
+										class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-base font-semibold rounded-xl transition-all shadow-md hover:shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-md"
 									>
 										<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
 										</svg>
-										Add to cart
+										{#if !dishAvail}
+											Out of stock
+										{:else}
+											Add to cart ({remaining(dish)} left)
+										{/if}
 									</button>
 								</div>
 							{/if}
@@ -150,6 +171,7 @@
 						</button>
 
 						{#if expandedId === dish.id}
+							{@const dishAvail = canAdd(dish)}
 							<div class="border-t border-gray-100 dark:border-gray-800 px-5 py-4 bg-gray-50/50 dark:bg-gray-800/30 space-y-3">
 								{#if dish.products.length > 0}
 									<div>
@@ -169,12 +191,17 @@
 								<button
 									type="button"
 									onclick={() => addToCart(dish)}
-									class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-sm font-medium rounded-xl transition-all shadow-sm hover:shadow cursor-pointer"
+									disabled={!dishAvail}
+									class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-sm font-medium rounded-xl transition-all shadow-sm hover:shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-sm"
 								>
 									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
 									</svg>
-									Add to cart
+									{#if !dishAvail}
+										Out of stock
+									{:else}
+										Add to cart ({remaining(dish)} left)
+									{/if}
 								</button>
 							</div>
 						{/if}

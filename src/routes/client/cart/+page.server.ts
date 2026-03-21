@@ -40,6 +40,36 @@ export const actions: Actions = {
             return fail(400, { error: 'Cart is empty' });
         }
 
+        const uniqueRequestedIds = [...new Set(dishIds)];
+        const dishCounts = new Map<number, number>();
+        for (const id of dishIds) dishCounts.set(id, (dishCounts.get(id) ?? 0) + 1);
+
+        const { data: dishAvail } = await locals.supabase
+            .from('dish')
+            .select('id, name, link_dish_recipe(product(id, quantity))')
+            .in('id', uniqueRequestedIds);
+
+        const insufficientDishes: string[] = [];
+        for (const d of (dishAvail ?? []) as any[]) {
+            const links = (d.link_dish_recipe ?? []) as any[];
+            const quantities = links.map(
+                (lr: any) => lr.product?.quantity != null ? Number(lr.product.quantity) : 0
+            );
+            const maxOrderable = quantities.length > 0 ? Math.min(...quantities) : 0;
+            const requested = dishCounts.get(d.id) ?? 0;
+            if (requested > maxOrderable) {
+                insufficientDishes.push(
+                    `${d.name ?? '#' + d.id} (requested ${requested}, only ${maxOrderable} available)`
+                );
+            }
+        }
+
+        if (insufficientDishes.length > 0) {
+            return fail(400, {
+                error: `Not enough stock: ${insufficientDishes.join('; ')}`
+            });
+        }
+
         const pickupDate = new Date(plannedPickup);
         if (Number.isNaN(pickupDate.getTime())) {
             return fail(400, { error: 'Invalid pickup time' });
@@ -100,14 +130,10 @@ export const actions: Actions = {
         }
 
         // --- Decrement product quantities for each ordered dish ---
-        const uniqueDishIds = [...new Set(dishIds)];
-        const dishCounts = new Map<number, number>();
-        for (const id of dishIds) dishCounts.set(id, (dishCounts.get(id) ?? 0) + 1);
-
         const { data: recipeLinks } = await locals.supabase
             .from('link_dish_recipe')
             .select('id_dish, id_product')
-            .in('id_dish', uniqueDishIds);
+            .in('id_dish', uniqueRequestedIds);
 
         if (recipeLinks && recipeLinks.length > 0) {
             const productDecrements = new Map<number, number>();

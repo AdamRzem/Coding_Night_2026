@@ -44,37 +44,58 @@ export const actions: Actions = {
 		const nextStatus = STATUS_FLOW[currentStatus];
 		if (!nextStatus) return fail(400, { error: `Cannot advance from status "${currentStatus}"` });
 
-		if (nextStatus === 'delivered') {
-			const { data: order } = await locals.supabase
-				.from('product_order')
-				.select('id_product, quantity')
-				.eq('id', orderId)
-				.maybeSingle();
+		// Fetch the order first to verify its current status and get restock info
+		const { data: order, error: fetchErr } = await locals.supabase
+			.from('product_order')
+			.select('id, id_product, quantity, status')
+			.eq('id', orderId)
+			.maybeSingle();
 
-			if (order) {
-				const { data: product } = await locals.supabase
-					.from('product')
-					.select('id, quantity')
-					.eq('id', order.id_product)
-					.maybeSingle();
-
-				if (product) {
-					await locals.supabase
-						.from('product')
-						.update({ quantity: (product.quantity ?? 0) + (order.quantity ?? 0) })
-						.eq('id', product.id);
-				}
-			}
+		if (fetchErr) {
+			console.error('Error fetching product order:', fetchErr.message);
+			return fail(500, { error: fetchErr.message });
 		}
 
-		const { error } = await locals.supabase
+		if (!order) return fail(404, { error: 'Order not found' });
+
+		if (order.status !== currentStatus) {
+			return fail(409, { error: 'Order status has already changed. Please refresh.' });
+		}
+
+		// Update status
+		const { error: updateErr } = await locals.supabase
 			.from('product_order')
 			.update({ status: nextStatus })
 			.eq('id', orderId);
 
-		if (error) {
-			console.error('Error advancing product order:', error.message);
-			return fail(500, { error: error.message });
+		if (updateErr) {
+			console.error('Error advancing product order:', updateErr.message);
+			return fail(500, { error: updateErr.message });
+		}
+
+		// Restock when transitioning to 'delivered'
+		if (nextStatus === 'delivered') {
+			const { data: product } = await locals.supabase
+				.from('product')
+				.select('id, quantity')
+				.eq('id', order.id_product)
+				.maybeSingle();
+
+			if (product) {
+				const newQty = (product.quantity ?? 0) + (order.quantity ?? 0);
+				const { error: restockErr } = await locals.supabase
+					.from('product')
+					.update({ quantity: newQty })
+					.eq('id', product.id);
+
+				if (restockErr) {
+					console.error('Error restocking product:', restockErr.message);
+				} else {
+					console.log(
+						`Restocked product #${product.id}: ${product.quantity} + ${order.quantity} = ${newQty}`
+					);
+				}
+			}
 		}
 
 		return { success: true };
