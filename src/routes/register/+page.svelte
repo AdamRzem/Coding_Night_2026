@@ -60,7 +60,7 @@
                         is_student: role === 'uczen' ? 1 : 0,
                         class: role === 'uczen' ? classYear : null,
                         class_prefix: role === 'uczen' ? classPrefix : null,
-                        gender: gender === 'kobieta' ? 'F' : 'M',
+                        gender: gender === 'kobieta' ? '0' : '1',
                         is_city: isFromCity === true ? 1 : 0
                     });
 

@@ -43,9 +43,11 @@
 		"@supabase/supabase-js": "^2.97.0",
 		"@types/leaflet": "^1.9.21",
 		"chart.js": "^4.5.1",
+		"jsqr": "^1.4.0",
 		"leaflet": "^1.9.4",
 		"nodemailer": "^8.0.1",
 		"qrcode": "^1.5.4",
-		"supabase": "^2.76.15"
+		"supabase": "^2.76.15",
+		"winget": "^0.0.1"
 	}
 }
