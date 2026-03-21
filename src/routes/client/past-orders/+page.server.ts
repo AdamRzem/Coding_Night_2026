@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
         .select('id, dish(name), created_at, planned_pickup, is_done, id_plate')
         .eq('id_client', locals.user!.id)
         .eq('is_done', 1)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false });
 
     if (error) {
         console.error('Error loading past orders:', error.message);
