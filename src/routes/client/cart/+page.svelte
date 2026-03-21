@@ -42,7 +42,7 @@
 	}
 
 	function buildPickupDatetime(dateStr: string, slot: { h: number; m: number }): string {
-		return `${dateStr}T${String(slot.h).padStart(2, '0')}:${String(slot.m).padStart(2, '0')}`;
+		return `${dateStr}T${String(slot.h + 1).padStart(2, '0')}:${String(slot.m).padStart(2, '0')}`;
 	}
 
 	// Default: today's date, first available slot (7:45) or next slot if 7:45 has passed
