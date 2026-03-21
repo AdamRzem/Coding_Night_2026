@@ -10,7 +10,8 @@ type BlogPost = {
   user_display_name: string | null;
 };
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, depends }) => {
+  depends('supabase:db');
   const { data, error } = await locals.supabase
     .from('BlogPost')
     .select('*')

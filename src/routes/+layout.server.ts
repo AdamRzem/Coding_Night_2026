@@ -2,6 +2,7 @@ import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals, depends }) => {
     depends('supabase:auth');
+    depends('supabase:db');
 
     let isWorker: boolean | null = null;
 

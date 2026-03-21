@@ -1,7 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ parent, locals }) => {
+export const load: LayoutServerLoad = async ({ parent, locals, depends }) => {
+    depends('supabase:db');
     const { user, isWorker } = await parent();
 
     if (!user) {

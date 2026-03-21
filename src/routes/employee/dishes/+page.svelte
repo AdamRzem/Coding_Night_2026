@@ -24,7 +24,7 @@
 						{#each data.items as row}
 							<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
 								{#each columns as col}
-									<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{row[col] ?? '—'}</td>
+									<td class="px-4 py-3 text-gray-700 dark:text-gray-300">{(row as Record<string, unknown>)[col] ?? '—'}</td>
 								{/each}
 							</tr>
 						{/each}

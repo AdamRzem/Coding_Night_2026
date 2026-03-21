@@ -1,6 +1,7 @@
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, depends }) => {
+    depends('supabase:db');
     const { data, error } = await locals.supabase
         .from('dish')
         .select('name, prep_time_minutes')

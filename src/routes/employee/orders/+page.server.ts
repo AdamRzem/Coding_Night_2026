@@ -1,7 +1,8 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ locals, parent }) => {
+export const load: PageServerLoad = async ({ locals, parent, depends }) => {
+    depends('supabase:db');
     const { workerId } = await parent();
 
     const { data, error } = await locals.supabase

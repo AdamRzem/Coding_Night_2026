@@ -11,7 +11,8 @@ type BlogPost = {
   czy_na_bocznicy: number;
 };
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, depends }) => {
+  depends('supabase:db');
   const { data, error } = await locals.supabase
     .from('wagony')
     .select('*')
