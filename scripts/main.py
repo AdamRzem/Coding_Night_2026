@@ -39,10 +39,9 @@ def get_user_preferences(user_uuid):
 
 def prepare_dataframe(raw_data, preferences):
     flat_list = []
-
+    last_order = None
     for order in raw_data:
         user = order.get('user_data', {})
-
         row = {
             'dish_id': order.get('id_dish'),
             'created_at': order.get('created_at'),
@@ -62,8 +61,10 @@ def prepare_dataframe(raw_data, preferences):
             'warm': preferences[0]['warm'],
             'cold': preferences[0]['cold'],
             'with_drink': preferences[0]['with_drink'],
-            'preferred_cuisine': preferences[0]['preferred_cuisine']
+            'preferred_cuisine': preferences[0]['preferred_cuisine'],
+            'last_order': last_order,
         }
+        last_order = order.get('id_dish')
         flat_list.append(row)
 
     dataframe = pd.DataFrame(flat_list)
@@ -93,7 +94,7 @@ df = prepare_dataframe(user_info,preferences)
 pd.set_option('display.max_columns', None)
 
 X = df.drop('dish_id', axis=1)
-X = df.drop('created_at', axis=1)
+X = X.drop('created_at', axis=1)
 y = df['dish_id']
 
 # BAGGING
@@ -110,7 +111,7 @@ model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
 accuracy = model.score(X_test, y_test)
-print(f"Accuracy: {accuracy:.2%}")
+# print(f"Accuracy: {accuracy:.2%}")
 
 # Recommendations
 
