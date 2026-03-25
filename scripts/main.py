@@ -39,9 +39,10 @@ def get_user_preferences(user_uuid):
 
 def prepare_dataframe(raw_data, preferences):
     flat_list = []
-    last_order = None
+    prefs = preferences[0] if preferences else {}
     for order in raw_data:
         user = order.get('user_data', {})
+
         row = {
             'dish_id': order.get('id_dish'),
             'created_at': order.get('created_at'),
@@ -50,21 +51,19 @@ def prepare_dataframe(raw_data, preferences):
             'user_gender': user.get('gender'),
             'user_class': user.get('class'),
             'is_student': user.get('is_student'),
-            'is_vegetarian': preferences[0]['is_vegetarian'],
-            'is_vegan': preferences[0]['is_vegan'],
-            'is_nut_allergy': preferences[0]['is_nut_allergy'],
-            'is_gluten_allergy': preferences[0]['is_gluten_allergy'],
-            'is_shellfish_allergy': preferences[0]['is_shellfish_allergy'],
-            'is_dairy_allergy':preferences[0]['is_dairy_allergy'],
-            'spice_tolerance': preferences[0]['spice_tolerance'],
-            'sweetness_preference': preferences[0]['sweetness_preference'],
-            'warm': preferences[0]['warm'],
-            'cold': preferences[0]['cold'],
-            'with_drink': preferences[0]['with_drink'],
-            'preferred_cuisine': preferences[0]['preferred_cuisine'],
-            'last_order': last_order,
+            'is_vegetarian': prefs.get('is_vegetarian', False),
+            'is_vegan': prefs.get('is_vegan', False),
+            'is_nut_allergy': prefs.get('is_nut_allergy', False),
+            'is_gluten_allergy': prefs.get('is_gluten_allergy', False),
+            'is_shellfish_allergy': prefs.get('is_shellfish_allergy', False),
+            'is_dairy_allergy':prefs.get('is_dairy_allergy', False),
+            'spice_tolerance': prefs.get('spice_tolerance', 0),
+            'sweetness_preference': prefs.get('sweetness_preference', 0),
+            'warm': prefs.get('warm', 0),
+            'cold': prefs.get('cold', 0),
+            'with_drink': prefs.get('with_drink', 0),
+            'preferred_cuisine': prefs.get('preferred_cuisine', 0),
         }
-        last_order = order.get('id_dish')
         flat_list.append(row)
 
     dataframe = pd.DataFrame(flat_list)
@@ -111,7 +110,7 @@ model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
 accuracy = model.score(X_test, y_test)
-# print(f"Accuracy: {accuracy:.2%}")
+print(f"Accuracy: {accuracy:.2%}")
 
 # Recommendations
 
