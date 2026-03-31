@@ -10,14 +10,7 @@
 	<div class="w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-8 space-y-6">
 		<h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50">Pickup ticket</h1>
 
-		{#if data.error}
-			<div
-				class="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200 px-4 py-3 text-sm"
-				role="alert"
-			>
-				{data.error}
-			</div>
-		{:else if data.order}
+		{#if data.order}
 			<dl class="space-y-4 text-sm">
 				<div>
 					<dt class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Order ID</dt>
@@ -32,6 +25,13 @@
 					<dd class="mt-1 text-base text-gray-900 dark:text-gray-100">{data.order.clientDisplayName}</dd>
 				</div>
 			</dl>
+		{:else}
+			<div
+				class="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 px-4 py-3 text-sm"
+				role="status"
+			>
+				No pickup data available.
+			</div>
 		{/if}
 	</div>
 </div>
